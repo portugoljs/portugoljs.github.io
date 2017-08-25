@@ -5,7 +5,7 @@ function compile(){
 	isOk = true;
 	isDone = false;
 	compiladorPascalS();
-	document.getElementById("output").value = "";
+	getElById("output").value = "";
 	time = new Date().getTime() - time;
 	mostraErro();
 }
@@ -20,37 +20,32 @@ function executeAgain(){
 		Interpreter.resume();
 	}
 }
-shortcut.add("Ctrl+F9",function(){executeAgain();});
+shortcut.add("Ctrl+F9", () => executeAgain());
 
 //Compilar e executar
-shortcut.add("F10",function() {compileAndExecute();});
+shortcut.add("F10",() => compileAndExecute());
 
 //rodar até o cursor
-shortcut.add("F4",function(){Interpreter._DEBUGGER.Until();});
+shortcut.add("F4", () => Interpreter._DEBUGGER.Until());
 
 //passo-a-passo entrando em rotinas (step into)
-shortcut.add("F7",function() {Interpreter._DEBUGGER.In();});
+shortcut.add("F7",() => Interpreter._DEBUGGER.In());
 
-//Executar até o finalInst
-shortcut.add("Ctrl+F7", function(){finish();});
-function finish(){
-	if(Interpreter.isRunning()){
-		Interpreter._DEBUGGER.isRunning = false;
-		Interpreter.resume();
-	}
-}
+//Executar sem parar
+shortcut.add("Ctrl+F7", () => Interpreter._DEBUGGER.dontStop());
 
 //Executar até sair da rotina(step out)
-shortcut.add("Ctrl+F8",function() {Interpreter._DEBUGGER.Out();});
+shortcut.add("Ctrl+F8",() => Interpreter._DEBUGGER.Out());
 
 //passo-a-passo saltando rotinas (step over)
-shortcut.add("F8",function() {Interpreter._DEBUGGER.Over();});
+shortcut.add("F8", () => Interpreter._DEBUGGER.Over());
 
 //interromper a depuração e a execução
-shortcut.add("Ctrl+F2",function() {
+shortcut.add("Ctrl+F2",() => {
 	if(Interpreter.isRunning())
 		Interpreter.finalize();
-});
+	}
+);
 
 //fim atalhos
 
@@ -62,7 +57,7 @@ function mostraLinhaDepurador(linha){
 }
 
 function makeMarkerLinha(linha) {
-	var span = document.getElementById("mk_"+linha);
+	var span = getElById("mk_"+linha);
 	var valor = 0;
 
 	if (span !== null) {

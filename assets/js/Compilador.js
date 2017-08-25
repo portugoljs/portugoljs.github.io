@@ -1263,7 +1263,6 @@ function block(fsys, isfun, level){
         MsgErro = err;
       }
     }//variabledeclaration
-
     function procdeclaration(){
       try{
         var isfun, tx, len;
@@ -1281,24 +1280,14 @@ function block(fsys, isfun, level){
         tx = t;
         insymbol();
         block(fsys.copy(semicolon), isfun, level+1);
-        var bool = 0;
-        len = 0;
-        if(isfun){
-          bool++;
-          switch (tab[tx].typ) {
-            case reals: len = TAM_REAL; break;
-            case chars:
-            case bools: len = TAM_CHAR; break;
-            default:  len = TAM_INT ;
-          }
-        }
-        emit1(lineOfLastSymbol, 32 + bool, len);
+				len = typesLength[tab[tx].typ];
+        emit1(lineOfLastSymbol, 32 + (isfun?1:0), len);
       }
       catch(err){
         isOk = false;
         MsgErro = err;
       }
-    }//procdeclarationbtab
+    }//procdeclaration
 
     function statement(fsys){
       var i;
@@ -1476,7 +1465,7 @@ function block(fsys, isfun, level){
           }
           if (cp < lastp)
             Error(39);
-          emit2(line, 19, tab[i].typ, btab[tab[i].ref].psize, level);
+          emit2(line, 19, tab[i].typ, btab[tab[i].ref].psize);
           if (tab[i].lev < level)
             emit2(line, 3, tab[i].lev, level);
           x.typ = tab[i].typ;
@@ -1709,39 +1698,39 @@ function block(fsys, isfun, level){
                       switch (tab[l].obj) {
                         case type1:
                           if(z.typ in new ENUM([ints, reals, bools, chars, strings]))
-                            emit1(linecount, 24, tab[l].adr, ints);
+                            emit2(linecount, 24, ints, tab[l].adr);
                           else if (z.typ == pointers){
                             if(tab[l].typ == arrays)
-                              emit1(linecount, 24, atab[tab[l].ref].size, ints);
+                              emit2(linecount, 24, ints, atab[tab[l].ref].size);
                             else if(tab[l].typ == records)
-                              emit1(linecount, 24, btab[tab[l].ref].vsize, ints);
+                              emit2(linecount, 24, ints, btab[tab[l].ref].vsize);
                           }
                           else if(z.typ == records)
-                            emit1(linecount, 24, btab[z.ref].vsize, ints)
+                            emit2(linecount, 24, ints, btab[z.ref].vsize)
                           else if(z.typ == arrays)
-                            emit1(linecount, 24, atab[z.ref].size, ints)
+                            emit2(linecount, 24, ints, atab[z.ref].size)
                           else
                             Error(48);
                         break;
                         case variable:
                         switch (z.typ) {
                           case reals:
-                            emit1(linecount, 24, TAM_REAL, ints);
+                            emit2(linecount, 24, ints, TAM_REAL);
                           break;
                           case pointers:
                           case ints:
                           case strings:
-                            emit1(linecount, 24, TAM_INT, ints);
+                            emit2(linecount, 24, ints, TAM_INT);
                           break;
                           case chars:
                           case bools:
-                            emit1(linecount, 24, TAM_CHAR, ints);
+                            emit2(linecount, 24, ints, TAM_CHAR);
                           break;
                           default:
                             if(z.typ == arrays)
-                              emit1(linecount, 24, atab[z.ref].size, ints);
+                              emit2(linecount, 24, ints, atab[z.ref].size);
                             else if(z.typ == records)
-                              emit1(linecount, 24, btab[z.ref].vsize, ints);
+                              emit2(linecount, 24, ints, btab[z.ref].vsize);
                             else
                               Error(48);
                         }
@@ -1795,7 +1784,7 @@ function block(fsys, isfun, level){
                       }
                       x.typ = ints;
                       insymbol();
-                      emit1(linecount, 24, length);
+                      emit2(linecount, 24, ints, length);
                     }
                     if(x.typ == ints)
                       emit(linecount, 71);
@@ -2016,9 +2005,9 @@ function block(fsys, isfun, level){
                     else {
                       if (sy != stringsy){
                         if (sy == charcon)
-                        x.typ = chars;
+                        	x.typ = chars;
                         else
-                        x.typ = ints;
+                        	x.typ = ints;
                       }
                       else {
                         inum = stab.splice(sx-sleng, sleng);
@@ -2926,7 +2915,7 @@ function block(fsys, isfun, level){
               do{
                 insymbol();
                 if (sy == stringsy){
-                  emit1(linecount, 24, sleng);
+                  emit2(linecount, 24, ints, sleng);
                   emit1(linecount, 28, inum);
                   insymbol();
                 }
@@ -3444,7 +3433,6 @@ try{
   isDone = true;
   finalInst = lc;
   emit(ilnx, 31);
-	tab[0].name = '';	//limpando a primeira posição de tab
 
   if (btab[2].vsize > stacksize)
     Error(49);

@@ -79,6 +79,8 @@ var lastCompiledCode = 0;	//Hash com o último código fonte compilado.
 var types = {"notyp":0, "ints":1, "reals":2, "bools":3, "chars":4, "arrays":5, "records":6, "strings":7, "pointers":8};
 var lineOfLastSymbol;
 const typesLength = {"notyp":0, "ints":4, "reals":8, "bools":1, "chars":1, "arrays":4, "records":4, "strings":4, "pointers":4}
+const getElById = document.getElementById.bind(document);	//alias para document.getElementById
+const codDiv = getElById('codDiv');
 
 
 function MemoryBlock(start, size, isAvailable){   //Objeto para gerenciamento de memória
@@ -189,15 +191,15 @@ function RandomGen() {
 		this.seed = (Math.imul(134775813, this.seed) + 1) & 0xffffffff; //(x%2^32=x&(2^32-1))
 		if (n === 1) {
 			if (this.seed >= 0)
-			return this.seed / 4294967296;  //4294967296 = 2^32
+				return this.seed / 4294967296;  //4294967296 = 2^32
 			else
-			return 1 + this.seed / 4294967296;
+				return 1 + this.seed / 4294967296;
 		}
 		else {
 			if (this.seed >= 0)
-			return Math.floor(this.seed / 4294967296 * n);
+				return Math.floor(this.seed / 4294967296 * n);
 			else
-			return n + Math.floor(this.seed / 4294967296 * n);
+				return n + Math.floor(this.seed / 4294967296 * n);
 		}
 	}
 }
@@ -205,7 +207,9 @@ function RandomGen() {
 function DebugObject(memoryTHIS){
 	var baseOfRoutineInStack = 0
 	,		activedVariables = []
-	,		n = 0;
+	,		n = 0
+	,		lastGlobalVariable = 2
+	,		table;
 	const MEMORY = memoryTHIS;
 
 	this.isRunning = false;
@@ -220,9 +224,11 @@ function DebugObject(memoryTHIS){
 		this.isRunning = true;
 		this.state = 0;
 		updateCallStack(progname, true);
-		this.showVariablesToUser();
 		activedVariables = [];
+		lastGlobalVariable = 2;
+		this.showVariablesToUser();
 		n = 0;
+		table = getElById('tab_var');
 	}
 
 	this.finalize = function(){
@@ -232,7 +238,14 @@ function DebugObject(memoryTHIS){
 		mostraItensDepuracao(false);
 		limpaLinhaDepurador();
 
-		document.getElementById('debug').removeChild(document.getElementById('coluna_direita'));
+		getElById('debug').removeChild(getElById('coluna_direita'));
+	}
+
+	this.dontStop = function(){
+		if(Interpreter.isRunning()){
+			Interpreter._DEBUGGER.state = UNKNOWN;
+			Interpreter.resume();
+		}
 	}
 
 	this.In = function(){
@@ -274,7 +287,6 @@ function DebugObject(memoryTHIS){
 						this.stopLine++;
 				}
 			}
-
 		}
 	}
 
@@ -311,61 +323,97 @@ function DebugObject(memoryTHIS){
 		this.stopLine = editor.getCursor().line;
 		this.state = UNTIL;
 		Interpreter.resume();
+	}
 
+	this.saveDataFromDebugPanel = function(input){
+		switch (input.name) {
+			case ints:
+				MEMORY.setInt(input.id ,parseInt(input.value));
+			break;
+			case pointers:
+				MEMORY.setInt(input.id, parseInt(input.value));
+			break;
+			case reals:
+				MEMORY.setFloat(input.id, parseFloat(input.value));
+			break;
+			case chars:
+				MEMORY.setChar(input.id, input.value.charAt());
+			break;
+			case strings:
+				s = MEMORY.setString(input.value);
+				if(MEMORY.getInt(input.id) != 0)
+					MEMORY.desallocate(MEMORY.getInt(input.id), MEMORY.getUint8(MEMORY.getInt(input.id)));
+				MEMORY.setInt(input.id, s);
+			break;
+			case bools:
+				MEMORY.setBoolean(input.id, input.value === 'verdadeiro');
+			break;
+		}
+		this.updateVariableInDebugPanel(input);
+		input.readOnly = 'true';
 	}
 
 	this.deleteLocalVariables = function(base = btab[2].vsize){
-		var table = document.getElementById("tab_var");
-		while(table.rows[2].children[1].children[0].id > base)
-			removerTopoPilhaVar();
-	}
-
-	this.searchVariable = function(name){
-		return tab.filter((value) => value.name === name);
+		var lastRow = table.rows.length - 1;
+		if(lastRow > lastGlobalVariable)
+			while(table.rows[lastRow].children[1].children[0].id > base){
+				table.deleteRow(lastRow--);
+				activedVariables.pop();
+			}
 	}
 
 	this.showVariablesToUser = function(id = 0){
-		var level = tab[id].lv
-		,		_id;
-		if(id === 0){		//variáveis globais
-			id = btab[2].last;
-			while(id != 0){
-				if(tab[id].obj in {variable, konstant})
-					insertVariableInDebugPanel(this.activeVariable(id));
-				id = tab[id].link;
-			}
-		}
+		var _id, row = lastGlobalVariable;
+		if(id === 0)		//variáveis globais
+			_id = btab[2].last;
 		else{
 			_id = tab[id].link;
-			while(_id != 0 && tab[_id].lv > 1){		//variáveis locais herdadas
-				if(tab[_id].obj in {variable, konstant} && tab[_id].lv === level)
-					insertVariableInDebugPanel(this.activeVariable(_id));
-				_id = tab[_id].link;
+			while(_id != 0 && tab[_id].lev > 1){		//variáveis herdadas
+				if(tab[_id].obj in {variable})
+					insertVariableInDebugPanel(this.activeVariable(_id), lastGlobalVariable);
+				if(tab[_id].link === 0)
+					_id--;
+				else
+					_id = tab[_id].link;
 			}
+			_id = btab[tab[id].ref].last;
+			row = getElById('tab_var').rows.length;
 		}
+		while(_id != 0){		//variáveis locais
+			if(tab[_id].obj in {variable})
+				insertVariableInDebugPanel(this.activeVariable(_id), row);
+			_id = tab[_id].link;
+		}
+		if(id === 0)
+			lastGlobalVariable = getElById('tab_var').rows.length;
+	}
+
+	this.searchActivedVariable = function(name){
+		return activedVariables.filter((v) => v.name === name).pop();
 	}
 
 	this.updateVariableInDebugPanel = function(input){
-		switch (input.name) {
-			case ints:
-				input.value = MEMORY.getInt(input.id)
-			break;
-			case pointers:
-				input.value = (MEMORY.getInt(input.id) != 0)? MEMORY.getInt(input.id) : 'nulo';
-			break;
-			case reals:
-				input.value = MEMORY.getFloat(input.id);
-			break;
-			case chars:
-				input.value = MEMORY.getChar(input.id);
-			break;
-			case strings:
-				input.value = MEMORY.getString(MEMORY.getInt(input.id));
-			break;
-			case bools:
-				input.value = (MEMORY.getBoolean(input.id))?'verdadeiro':'falso';
-			break;
-		}
+		if(input != null)
+			switch (input.name) {
+				case ints:
+					input.value = MEMORY.getInt(input.id)
+				break;
+				case pointers:
+					input.value = (MEMORY.getInt(input.id) != 0)? MEMORY.getInt(input.id) : 'nulo';
+				break;
+				case reals:
+					input.value = MEMORY.getFloat(input.id);
+				break;
+				case chars:
+					input.value = MEMORY.getChar(input.id);
+				break;
+				case strings:
+					input.value = MEMORY.getString(MEMORY.getInt(input.id));
+				break;
+				case bools:
+					input.value = (MEMORY.getBoolean(input.id))?'verdadeiro':'falso';
+				break;
+			}
 	}
 
 	this.insertNameInCallStack = function(name){
@@ -377,8 +425,9 @@ function DebugObject(memoryTHIS){
 	}
 
 	this.activeVariable = function(id){
-		activedVariables[++n] = new VarObject(id);
-		return activedVariables[n];
+		actvar = new VarObject(id);
+		activedVariables.push(actvar);
+		return actvar;
 	}
 
 	this.hasTheSameBaseInStack = function(base){
@@ -395,27 +444,26 @@ function InputObject(memoryTHIS){
 	,		readComplete = false
 	,		typeOfData;
 	const MEMORY = memoryTHIS;
-	this.inputByDebug = false;
-	this.save = function(value, adr = MEMORY.getInt(), typ = typeOfData){
-			if(isReadingInstruction || this.inputByDebug){
+
+	this.save = function(value){
+			if(isReadingInstruction){
 				isReadingInstruction = false;
-				this.inputByDebug = false;
-				switch (typ) {
+				switch (typeOfData) {
 					case ints:
-					case pointers:
-						MEMORY.setInt(adr, parseInt(value));
+						MEMORY.setInt(MEMORY.getInt(), parseInt(value));
+						//atualizaVariavel(MEMORY.popInt(), parseInt(value));
 					break;
 					case reals:
-						MEMORY.setFloat(adr, Number(value));
+						MEMORY.setFloat(MEMORY.getInt(), Number(value));
+						//atualizaVariavel(MEMORY.popInt(), Number(value));
 					break;
 					case chars:
-						MEMORY.setChar(adr, value[0]);
+						MEMORY.setChar(MEMORY.getInt(), value[0]);
+						//atualizaVariavel(MEMORY.popInt(), value[0]);
 					break;
 					case strings:
-						MEMORY.setInt(adr, MEMORY.setString(value, MEMORY.getInt(MEMORY.getInt()), false));
-					break;
-					case bools:
-						MEMORY.setBoolean(adr, value === 'verdadeiro');
+						MEMORY.setInt(MEMORY.getInt(), MEMORY.setString(value, MEMORY.getInt(MEMORY.getInt()), false));
+						//atualizaVariavel(MEMORY.popInt(), value)
 					break;
 				}
 			}

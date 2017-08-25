@@ -9,6 +9,7 @@ const Interpreter = new function(){
 	,		intervalExecution
 	,		display
 	,		readingInstruction = false
+	,		out = []
 	,		hasErrors
 	,		outdebug = false
 	,		bydebug = false;
@@ -39,7 +40,7 @@ const Interpreter = new function(){
 			MEMORY.markStack(btab[2].vsize);
 			display = [];
 			display[1] = 0;
-			outputConsole = document.getElementById("output");
+			outputConsole = getElById("output");
 			limpaConsole();
 			pc = tab[MEMORY.getInt(12)].adr;
 			hasErrors = false;
@@ -255,8 +256,11 @@ const Interpreter = new function(){
 					switch (ir.x) {
 						case reals:
 							h1 = MEMORY.getFloat(MEMORY.getTopOfStack() - 24);	//Acessar um valor real 24 bytes abaixo do topo.
-							if(h1 <= MEMORY.getFloat(MEMORY.getTopOfStack() - 16))
+							if(h1 <= MEMORY.getFloat(MEMORY.getTopOfStack() - 16)){
 								MEMORY.setFloat(MEMORY.getInt(MEMORY.getTopOfStack() - 28), h1);
+								if(DEBUGGER.isRunning)
+									DEBUGGER.updateVariableInDebugPanel(getElById(MEMORY.getInt(MEMORY.getTopOfStack() - 28)));
+							}
 							else {
 								MEMORY.popBlock(28);	//3 valores reais + 1 inteiro
 								pc = ir.y;
@@ -269,8 +273,11 @@ const Interpreter = new function(){
 						break;
 						case ints:
 							h1 = MEMORY.getInt(MEMORY.getTopOfStack() - 12);
-							if(h1 <= MEMORY.getInt(MEMORY.getTopOfStack() - 8))
+							if(h1 <= MEMORY.getInt(MEMORY.getTopOfStack() - 8)){
 								MEMORY.setInt(MEMORY.getInt(MEMORY.getTopOfStack() - 16), h1);
+								if(DEBUGGER.isRunning)
+									DEBUGGER.updateVariableInDebugPanel(getElById(MEMORY.getInt(MEMORY.getTopOfStack() - 16)));
+							}
 							else {
 								MEMORY.popBlock(16);
 								pc = ir.y;
@@ -283,8 +290,11 @@ const Interpreter = new function(){
 						break;
 						case chars:
 							h1 = MEMORY.getUint8(MEMORY.getTopOfStack() - 3);
-							if(h1 <= MEMORY.getUint8(MEMORY.getTopOfStack() - 2))
+							if(h1 <= MEMORY.getUint8(MEMORY.getTopOfStack() - 2)){
 								MEMORY.setUint8(MEMORY.getInt(MEMORY.getTopOfStack() - 7), h1);
+								if(DEBUGGER.isRunning)
+									DEBUGGER.updateVariableInDebugPanel(getElById(MEMORY.getInt(MEMORY.getTopOfStack() - 7)));
+							}
 							else {
 								MEMORY.popBlock(7);
 								pc = ir.y;
@@ -307,7 +317,6 @@ const Interpreter = new function(){
 								pc = ir.y;
 								if(DEBUGGER.state == IN){
 									DEBUGGER.stopLine = kode[pc].line;
-									atualizaVariavel(h2, h1);
 									mostraLinhaDepurador(DEBUGGER.stopLine);
 									DEBUGGER.stopLine--;
 								}
@@ -323,7 +332,6 @@ const Interpreter = new function(){
 								pc = ir.y;
 								if(DEBUGGER.state == IN){
 									DEBUGGER.stopLine = kode[pc].line;
-									atualizaVariavel(h2, h1);
 									mostraLinhaDepurador(DEBUGGER.stopLine);
 									DEBUGGER.stopLine--;
 								}
@@ -339,7 +347,6 @@ const Interpreter = new function(){
 								pc = ir.y;
 								if(DEBUGGER.state == IN){
 									DEBUGGER.stopLine = kode[pc].line;
-									atualizaVariavel(h2, h1);
 									mostraLinhaDepurador(DEBUGGER.stopLine);
 									DEBUGGER.stopLine--;
 								}
@@ -348,13 +355,18 @@ const Interpreter = new function(){
 								MEMORY.popBlock(7);
 						break;
 					}
+					if(DEBUGGER.isRunning)
+						DEBUGGER.updateVariableInDebugPanel(getElById(h2));
 				break;
 				case 16:
 					switch (ir.x) {
 						case reals:
 							h1 = MEMORY.getFloat(MEMORY.getTopOfStack() - 24);
-							if(h1 >= MEMORY.getFloat(MEMORY.getTopOfStack() - 16))
+							if(h1 >= MEMORY.getFloat(MEMORY.getTopOfStack() - 16)){
 								MEMORY.setFloat(MEMORY.getInt(MEMORY.getTopOfStack() - 28), h1);
+								if(DEBUGGER.isRunning)
+									DEBUGGER.updateVariableInDebugPanel(getElById(MEMORY.getInt(MEMORY.getTopOfStack() - 28)));
+							}
 							else {
 								MEMORY.popBlock(28);
 								pc = ir.y;
@@ -367,8 +379,11 @@ const Interpreter = new function(){
 						break;
 						case ints:
 							h1 = MEMORY.getInt(MEMORY.getTopOfStack() - 12);
-							if(h1 >= MEMORY.getInt(MEMORY.getTopOfStack() - 8))
+							if(h1 >= MEMORY.getInt(MEMORY.getTopOfStack() - 8)){
 								MEMORY.setInt(MEMORY.getInt(MEMORY.getTopOfStack() - 16), h1);
+								if(DEBUGGER.isRunning)
+									DEBUGGER.updateVariableInDebugPanel(getElById(MEMORY.getInt(MEMORY.getTopOfStack() - 16)));
+							}
 							else {
 								MEMORY.popBlock(16);
 								pc = ir.y;
@@ -381,8 +396,11 @@ const Interpreter = new function(){
 						break;
 						case chars:
 							h1 = MEMORY.getUint8(MEMORY.getTopOfStack() - 3);
-							if(h1 >= MEMORY.getUint8(MEMORY.getTopOfStack() - 2))
+							if(h1 >= MEMORY.getUint8(MEMORY.getTopOfStack() - 2)){
 								MEMORY.setUint8(MEMORY.getInt(MEMORY.getTopOfStack() - 7), h1);
+								if(DEBUGGER.isRunning)
+									DEBUGGER.updateVariableInDebugPanel(getElById(MEMORY.getInt(MEMORY.getTopOfStack() - 7)));
+							}
 							else {
 								MEMORY.popBlock(7);
 								pc = ir.y;
@@ -405,7 +423,6 @@ const Interpreter = new function(){
 								pc = ir.y;
 								if(DEBUGGER.state == IN){
 									DEBUGGER.stopLine = kode[pc].line;
-									atualizaVariavel(h2, h1);
 									mostraLinhaDepurador(DEBUGGER.stopLine);
 									DEBUGGER.stopLine--;
 								}
@@ -421,7 +438,6 @@ const Interpreter = new function(){
 								pc = ir.y;
 								if(DEBUGGER.state == IN){
 									DEBUGGER.stopLine = kode[pc].line;
-									atualizaVariavel(h2, h1);
 									mostraLinhaDepurador(DEBUGGER.stopLine);
 									DEBUGGER.stopLine--;
 								}
@@ -437,7 +453,6 @@ const Interpreter = new function(){
 								pc = ir.y;
 								if(DEBUGGER.state == IN){
 									DEBUGGER.stopLine = kode[pc].line;
-									atualizaVariavel(h2, h1);
 									mostraLinhaDepurador(DEBUGGER.stopLine);
 									DEBUGGER.stopLine--;
 								}
@@ -452,15 +467,7 @@ const Interpreter = new function(){
 					if (!MEMORY.HasAvailableSpaceInStack(h1))
 						crash('alloc:nospace:stack');
 					else{
-						if (tab[ir.y].obj == "prozedure")
-							MEMORY.pushBlock(16);
-						else
-							switch (tab[ir.y].typ) {
-								case reals: MEMORY.pushBlock(24);  break;
-								case bools:
-								case chars: MEMORY.pushBlock(17);
-								default:  MEMORY.pushBlock(20);
-							}
+						MEMORY.pushBlock(16 + typesLength[tab[ir.y].typ]);
 						MEMORY.setInt(MEMORY.getTopOfStack() - 8, h1);
 						MEMORY.setInt(MEMORY.getTopOfStack() - 4, ir.y);
 					}
@@ -468,13 +475,7 @@ const Interpreter = new function(){
 				case 19:
 					h1 = MEMORY.getTopOfStack() - ir.y; //bytes até a base
 					h5 = h1;    //Posição de inicio da pilha do procedimento ou função
-					switch (ir.x) {//espaço para o retorno da função
-						case reals: h1 += 8; break;
-						case bools:
-						case chars: h1++; break;
-						case notyp: ; break; //Procedimento não tem retorno, não precisa alocar espaço
-						default:  h1 += 4;
-					}
+					h1 += typesLength[ir.x];	//espaço para retorna de função
 					h2 = MEMORY.getInt(h1 + 12); //referência para tab
 					h3 = tab[h2].lev;
 					display[h3 + 1] = h5;
@@ -482,6 +483,11 @@ const Interpreter = new function(){
 					MEMORY.setInt(h1, pc);
 					MEMORY.setInt(h1 + 4, display[h3]);
 					MEMORY.setInt(h1 + 8, b);
+					for (h3 = MEMORY.getTopOfStack();  h3 < h4;  h3++)
+							MEMORY.setUint8(h3, 0);
+					b = h1;
+					MEMORY.markStack(h4);
+					pc = tab[h2].adr;
 					if(DEBUGGER.isRunning){
 						if(DEBUGGER.state == IN){
 							DEBUGGER.stopLine = kode[tab[h2].adr].line;
@@ -491,11 +497,28 @@ const Interpreter = new function(){
 						DEBUGGER.showVariablesToUser(h2);
 						DEBUGGER.insertNameInCallStack(tab[h2].name);
 					}
-					for (h3 = MEMORY.getTopOfStack();  h3 < h4;  h3++)
-							MEMORY.setUint8(h3, 0);
-					b = h5;
-					MEMORY.markStack(h4);
-					pc = tab[h2].adr;
+				break;
+				case 32:    //Saída de função/procedimento
+				case 33:
+					MEMORY.markStack(b/*+ir.y*/);        //procedimento ou função
+					pc = MEMORY.getInt(b/*+ir.y*/);
+					//h1 = b - ir.y;		//Base da função de saída
+					b = MEMORY.getInt(b + 8/* + ir.y*/);
+					//h2 = MEMORY.getInt(h1 + 12);		//id em tab da rotina que está sendo terminada.
+					h3 = MEMORY.getInt(b + 12);		//id em tab da rotina que está sendo reativada
+					if(DEBUGGER.isRunning){
+						DEBUGGER.deleteLocalVariables();
+						if(b != 0)
+							DEBUGGER.showVariablesToUser(h3);
+						DEBUGGER.removeNameInCallStack();
+						if(DEBUGGER.state == IN)
+							DEBUGGER.stopLine = kode[pc].line-1;
+						else if(DEBUGGER.state == OUT)
+							if(DEBUGGER.hasTheSameBaseInStack(h1)){
+								DEBUGGER.stopLine = kode[pc].line-1;
+								DEBUGGER.state = IN;
+							}
+					}
 				break;
 				case 20:
 					h1 = ir.y; //apontador para atab
@@ -561,7 +584,7 @@ const Interpreter = new function(){
 					}
 				break;
 				case 24://Carrega valor literal na pilha
-					if (!MEMORY.HasAvailableSpaceInStack(ir.x == reals ? 8 : ir.x == chars || ir.x == bools ? 1 : 4))
+					if (!MEMORY.HasAvailableSpaceInStack(typesLength[ir.x]))
 						crash('alloc:nospace:stack');
 					else
 						switch (ir.x) {
@@ -639,28 +662,7 @@ const Interpreter = new function(){
 				case 31:
 					finalize();
 				break;
-				case 32:    //Saída de função/procedimento
-				case 33:
-					if (ir.f == 32)   //Procedimento
-						MEMORY.markStack(b);
-					else
-						MEMORY.markStack(b+ir.y);        //Função
-					pc = MEMORY.getInt(b+ir.y);
-					h1 = b;		//Base da função de saída
-					b = MEMORY.getInt(b + 8 + ir.y);
-
-					if(DEBUGGER.isRunning){
-						DEBUGGER.removeNameInCallStack();
-						DEBUGGER.deleteLocalVariables();
-						if(DEBUGGER.state == IN)
-							DEBUGGER.stopLine = kode[pc].line-1;
-						else if(DEBUGGER.state == OUT)
-							if(DEBUGGER.hasTheSameBaseInStack(h1)){
-								DEBUGGER.stopLine = kode[pc].line-1;
-								DEBUGGER.state = IN;
-							}
-					}
-				break;
+				//32 e 33 juntos ao 18 e 19
 				case 34:    //Carregamento indireto
 					switch (ir.y) {
 						case TAM_INT:
@@ -706,20 +708,19 @@ const Interpreter = new function(){
 							break;
 							case "reals":
 								MEMORY.setFloat(MEMORY.getInt(MEMORY.getTopOfStack() - 12), MEMORY.getFloat());
-								//atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 12), MEMORY.getFloat(), ir.x);
 								MEMORY.popBlock(12);
 							break;
 							case "chars":
 							case "bools":    //BOOL ou CHAR
 								MEMORY.setUint8(MEMORY.getInt(MEMORY.getTopOfStack() - 5), MEMORY.getUint8());
-								//atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 5), MEMORY.getUint8(), ir.x);
 								MEMORY.popBlock(5);
 							break;
 							default://ints pointers
 								MEMORY.setInt(MEMORY.getInt(MEMORY.getTopOfStack() - 8), MEMORY.getInt());
-								//atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 8), MEMORY.getInt(), ir.x);
 								MEMORY.popBlock(8);
 						}
+						if(DEBUGGER.isRunning)
+							DEBUGGER.updateVariableInDebugPanel(getElById(MEMORY.getInt(MEMORY.getTopOfStack())));
 					}
 					else {
 						for(i = 1; i <= ir.y; i++){
@@ -738,20 +739,20 @@ const Interpreter = new function(){
 								break;
 								case "reals":
 									MEMORY.setFloat(MEMORY.getInt(MEMORY.getTopOfStack() - 8 - i * 4), MEMORY.getFloat());
-									atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 8 - i * 4), MEMORY.getFloat(), ir.x);
 								break;
 								case "chars":
 								case "bools":    //BOOL ou CHAR
 									MEMORY.setUint8(MEMORY.getInt(MEMORY.getTopOfStack() - 1 - i * 4), MEMORY.getUint8());
-									atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 1 - i * 4), MEMORY.getUint8(), ir.x);
 								break;
 								default://ints pointers
 									MEMORY.setInt(MEMORY.getInt(MEMORY.getTopOfStack() - 4 - i * 4), MEMORY.getInt());
-									atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 4 - i * 4), MEMORY.getInt(), ir.x);
 							}
 						}
 						MEMORY.popBlock(typesLength[ir.x] + ir.y * 4);
+						if(DEBUGGER.isRunning)
+							DEBUGGER.updateVariableInDebugPanel(getElById(MEMORY.getInt(MEMORY.getTopOfStack())));
 					}
+
 				break;
 				case 39:  //expressão relacional igual(real, inteiro, string e caracter)
 					switch (ir.y) {
@@ -1111,52 +1112,58 @@ const Interpreter = new function(){
 		,		b
 		,		l
 		,		h;
-
-		if( typ in stantyps ){
-			switch (typ) {
-				case reals:
-					value = MEMORY.getFloat(Interpreter.getBase(v.lev) + v.adr + offset);
-				break;
-				case pointers:
-				case ints:
-					value = MEMORY.getInt(Interpreter.getBase(v.lev) + v.adr + offset);
-				break;
-				case chars:
-					value = MEMORY.getChar(Interpreter.getBase(v.lev) + v.adr + offset);
-					if(value.charCodeAt() < 32)
-						value = '';
-				break;
-				case bools:
-					value = MEMORY.getBoolean(Interpreter.getBase(v.lev) + v.adr + offset);
-				break;
-				case strings:
-					value = MEMORY.getString(MEMORY.getInt(Interpreter.getBase(v.lev) + v.adr + offset));
-				break;
-			}
+		if(v.obj === konstant){
+			if(v.typ === reals)
+				return rconst[v.adr];
+			else
+				return v.adr;
 		}
-		else{
-			value = [];
-			switch (typ) {
-				case records:
-					value = [];
-					l = btab[ref].last;
-					while(l != 0){
-						value.push(this.getValueWithIndexToTab(id, tab[l].ref, offset+tab[l].adr, tab[l].typ));
-						l = tab[l].link;
-					}
-				break;
-				case arrays:
-					value = [];
-					a = atab[ref];
-					l = 0;
-					h = a.high - a.low;	//índice final do arranjo positivo a partir de 0
-					while(l <= h){
-						value.push(this.getValueWithIndexToTab(id, a.elref, offset+l*a.elsize, a.eltyp));
-						l++;
-					}
-				break;
+		else
+			if( typ in stantyps ){
+				switch (typ) {
+					case reals:
+						value = MEMORY.getFloat(Interpreter.getBase(v.lev) + v.adr + offset);
+					break;
+					case pointers:
+					case ints:
+						value = MEMORY.getInt(Interpreter.getBase(v.lev) + v.adr + offset);
+					break;
+					case chars:
+						value = MEMORY.getChar(Interpreter.getBase(v.lev) + v.adr + offset);
+						if(value.charCodeAt() < 32)
+							value = '';
+					break;
+					case bools:
+						value = MEMORY.getBoolean(Interpreter.getBase(v.lev) + v.adr + offset);
+					break;
+					case strings:
+						value = MEMORY.getString(MEMORY.getInt(Interpreter.getBase(v.lev) + v.adr + offset));
+					break;
+				}
 			}
-		}
+			else{
+				value = [];
+				switch (typ) {
+					case records:
+						value = [];
+						l = btab[ref].last;
+						while(l != 0){
+							value.push(this.getValueWithIndexToTab(id, tab[l].ref, offset+tab[l].adr, tab[l].typ));
+							l = tab[l].link;
+						}
+					break;
+					case arrays:
+						value = [];
+						a = atab[ref];
+						l = 0;
+						h = a.high - a.low;	//índice final do arranjo positivo a partir de 0
+						while(l <= h){
+							value.push(this.getValueWithIndexToTab(id, a.elref, offset+l*a.elsize, a.eltyp));
+							l++;
+						}
+					break;
+				}
+			}
 		return value;
 	}
 }

@@ -1,5 +1,3 @@
-var codDiv = document.getElementById('codDiv');//
-
 function aumentarTamanho(){
 	var style = window.getComputedStyle(codDiv, null).getPropertyValue('font-size');
 	var fontSize = parseFloat(style);
@@ -19,21 +17,27 @@ function diminuirTamanho(){
 function time32() {
 	return new Date().getTime() & 0x7fffffff; // getTime() % (2^31) = getTime() % (2^31-1=0x7fffffff)
 }
-/* fim teste tooltip */
 $(document).ready(function() {
 	$('body').delegate('.cm-variable','mouseover',function(e){
 		if (Interpreter.isRunning() && Interpreter._DEBUGGER.isRunning) {
+			activedVariable = Interpreter._DEBUGGER.searchActivedVariable(e.currentTarget.innerText);
+			if(activedVariable instanceof VarObject){
+				var x = e.clientX, y = e.clientY;
+				var tooltipSpan = getElById('tpVar');
+				var data = normalizeData(Interpreter.getValueWithIndexToTab(activedVariable.id), tab[activedVariable.id].typ);
+				if(data.length > 150)
+					data.splice(0,150);
+				tooltipSpan.style.width = (data.length * 7 + 2)+"px";
+				tooltipSpan.innerText = data;
+				tooltipSpan.style.visibility = 'visible';
+				tooltipSpan.style.top = (y + 10) + 'px';
+				tooltipSpan.style.left = (x + 10) + 'px';
+			}
 
-			var x = e.clientX, y = e.clientY;
-			var tooltipSpan = document.getElementById('tpVar');
-			tooltipSpan.innerHTML = valorVar;
-			tooltipSpan.style.visibility = 'visible';
-			tooltipSpan.style.top = (y + 10) + 'px';
-			tooltipSpan.style.left = (x + 10) + 'px';
 		}
 	});
 	$('body').delegate('.cm-variable','mouseout',function(e){
-		var tooltipSpan = document.getElementById('tpVar');
+		var tooltipSpan = getElById('tpVar');
 		tooltipSpan.style.visibility = 'hidden';
 	});
 });
@@ -55,33 +59,34 @@ $(document).ready(function() {
 
 			break;
 			case 'para':
-				document.getElementById('infoPanel').innerText = forTip;
-				document.getElementById('panel-info2').innerText = forTip2;
+				getElById('infoPanel').innerText = forTip;
+				getElById('infoPanel2').innerText = forTip2;
 			break;
 			case 'se':
-				document.getElementById('infoPanel').innerText = ifTip;
+				getElById('infoPanel').innerText = ifTip;
+				getElById('infoPanel2').innerText = ifTip2;
 			break;
 			case 'caso':
+				getElById('infoPanel').innerText = caseTip;
+				getElById('infoPanel2').innerText = caseTip2;
 			break;
 			case 'enquanto':
-				document.getElementById('infoPanel').innerText = whileTip;
+				getElById('infoPanel').innerText = whileTip;
+				getElById('infoPanel2').innerText = whileTip2;
 			break;
 
 			case 'de':
 
 			break;
 			case 'repita':
-				document.getElementById('panel-info').innerText = untilTip;
+				getElById('infoPanel').innerText = untilTip;
+				getElById('infoPanel2').innerText = untilTip2;
 			break;
 			case 'funcao':
 
 			break;
 			case 'procedimento':
 			break;
-			case 'caso':
-				document.getElementById('panel-info').innerText = caseTip;
-			break;
-
 		}
 	});
 });
@@ -103,8 +108,8 @@ function GetHashCode(str) {
 
 
 //ao clicar no botao abre janela para selecionar arquivo
-/*document.getElementById('novo').onclick = function() {
-document.getElementById('my_file').click();getIsRunning
+/*getElById('novo').onclick = function() {
+getElById('my_file').click();getIsRunning
 };*/
 
 //seta template no editor de texto
@@ -127,17 +132,41 @@ function InputBoxEvent(e) {
 
 //Função para pegar o valor informado pelo usuário
 function getValueFromUser() {
-	return document.getElementById("InputBox").value;
+	return getElById("InputBox").value;
 }
 
 //Limpar input
 function clearInputBox() {
-	document.getElementById("InputBox").value = "";
+	getElById("InputBox").value = "";
+}
+
+//adequar os valores javascript para português estruturado
+function normalizeData(v, typ){
+	switch (typ) {
+		case chars:
+		case strings:
+			return "'" + v + "'";
+		break;
+		case bools:
+			return (v)?'verdadeiro':'falso';
+		break;
+		case pointers:
+			return (v === 0)? 'nulo': v.toString();
+		break;
+		case arrays:
+			return v.toString().slice(0,50);
+		break;
+		case records:
+			return '...';
+		break;
+		default:
+			return v.toString();
+	}
 }
 
 //Limpa o console de saída quando um novo programa é iniciado
 function limpaConsole() {
-	document.getElementById("output").value = "";
+	getElById("output").value = "";
 }
 
 function StringFilter(str){			//Retorna o final da string no tamanho máximo de linhas delimitado por lineLimit
@@ -192,14 +221,14 @@ function esconderModalOutput(){
 
 function renderInput(bool) {
 	if (bool) {
-		document.getElementById("InputBox").style.visibility = "visible";
+		getElById("InputBox").style.visibility = "visible";
 	} else {
-		document.getElementById("InputBox").style.visibility = "hidden";
+		getElById("InputBox").style.visibility = "hidden";
 	}
 }
 
 function insertDebugHTML(){
-	document.getElementById("debug").innerHTML = `<div id="coluna_direita" class="col-md-4 col-xs-12"  style="background-color:white; max-height:450px;float:right">
+	getElById("debug").innerHTML = `<div id="coluna_direita" class="col-md-4 col-xs-12"  style="background-color:white; max-height:450px;float:right">
     <!-- <div id="coluna_direita" style="width:295px; height:400px; float:right; visible:none; background-color:white; margin:2px;  overflow: auto;" > -->
     <div class="row" style="margin-top:5px;">
       <div class="col-md-6 col-xs-12" style="resize:both;float:right">
@@ -219,8 +248,8 @@ function insertDebugHTML(){
                 <!-- inserir linhas pilha variaveis-->
               </tbody>
             </table>
-            <button type="button" class="btn btn-default pull-right" onclick="salvar()">Salvar</button>
-            <button type="button" class="btn btn-default pull-right" onclick="ativarTabelaVar()">Editar</button>
+            <!--<button type="button" class="btn btn-default pull-right" onclick="salvar()">Salvar</button>
+            <button type="button" class="btn btn-default pull-right" onclick="ativarTabelaVar()">Editar</button>-->
           </div>
         </div>
       </div>
@@ -248,28 +277,28 @@ function insertDebugHTML(){
 
 //debug
 function adicionarErro(erro) {
-	var text = document.getElementById("debugPanel");
-	document.getElementById("debugPanel").style.visibility = "visible";
+	var text = getElById("debugPanel");
+	getElById("debugPanel").style.visibility = "visible";
 	text.innerText = erro;
 }
 
 function limpaDebug(){
-	document.getElementById("debugPanel").style.visibility = "hidden";
-	document.getElementById("debugPanel").innerText = "";
+	getElById("debugPanel").style.visibility = "hidden";
+	getElById("debugPanel").innerText = "";
 }
 
 //fim funcoes debug
 
 //funcoes para pilha
 function updateCallStack(funcao, add) {
+	var table = getElById("tab_callstack");
 	if(add){
-		var table = document.getElementById("tab_callstack");
-		var row = table.insertRow(1);
+		var row = table.insertRow(table.rows.length);
 		var cell1 = row.insertCell(0);
 		cell1.innerHTML = funcao;
 	}
 	else
-		document.getElementById("tab_callstack").deleteRow(1);
+		getElById("tab_callstack").deleteRow(table.rows.length-1);
 
 }
 
@@ -281,15 +310,8 @@ function removerTodaPilhaFuncoes(){
 
 //funcoes para pilha de variaveis
 
-//cria objeto tabela e verifica se existe os valores para adicionar na tabela
-function adicionarObjetoVar(id){
-	objeto = new VarObject(tab[id].name, UNKNOWN, id, tab[id].lev, tab[id].adr);
-	insertVariableInDebugPanel(objeto);
-	arrayObjetoTabela.push(objeto);
-}
-
 function insertVariableInDebugPanel(variable, idRow = 2, ref = tab[variable.id].ref, typ = tab[variable.id].typ, offset = 0, name = '') {
-	var table = document.getElementById("tab_var")
+	var table = getElById("tab_var")
 	,		row = table.insertRow(idRow)
 	, 	cell1 = row.insertCell(0)
 	, 	cell2 = row.insertCell(1)
@@ -317,34 +339,27 @@ function insertVariableInDebugPanel(variable, idRow = 2, ref = tab[variable.id].
 					else
 						variable.value = 'falso';
 				cell1.innerHTML = variable.name;
-				cell2.innerHTML = "<input type='text' onkeypress='return inputVariableEvent(event, this)' readOnly='true' value='"+ variable.value +"'name='"+typ+"' id='"+ (Interpreter.getBase(variable.lv) + variable.adr + offset) +"'onclick='enableInputField(this);'>";
+				cell2.innerHTML = "<input type='text' readOnly='true' value='"+ variable.value +"'name='"+typ+"' id='"+ (tab[variable.id].obj === "konstant"? 0 : (Interpreter.getBase(variable.lv) + variable.adr + offset)) +"'onclick='enableInputField(this)'>";
 			}
 			else {
 				cell1.innerText = normalizeComposedLabel(variable, name);
-				cell2.innerHTML = "<input type='text' onkeypress='return inputVariableEvent(event, this)' readOnly='true' value='"+ Interpreter.getValueWithIndexToTab(variable.id, ref, offset, typ) +"'name='"+typ+"' id='"+ (Interpreter.getBase(variable.lv) + variable.adr + offset) +"'onclick='enableInputField(this);'>";
+				cell2.innerHTML = "<input type='text' readOnly='true' value='"+ Interpreter.getValueWithIndexToTab(variable.id, ref, offset, typ) +"'name='"+ typ +"' id='"+ (tab[variable.id].obj === "konstant"? 0 : (Interpreter.getBase(variable.lv) + variable.adr + offset))	 +"'onclick='enableInputField(this);'>";
 			}
-
 		break;
 	}
 	return row;
 }
 
-
 function enableInputField(input){
 	input.readOnly = false;
-}
-
-function inputVariableEvent(e, v){
-	if(e.key === 'Enter'){
-		Interpreter._INPUT.inputByDebug = true;
-		Interpreter._INPUT.save(v.value, v.id, v.name);
-		disableInputField(v);
-		Interpreter._DEBUGGER.updateVariableInDebugPanel(v);
-	}
+	input.addEventListener('keypress', (event) => {
+		if(event.key === 'Enter')
+			Interpreter._DEBUGGER.saveDataFromDebugPanel(input);
+	});
 }
 
 function disableInputField(input){
-	input.readOnly = true;
+	input.readOnly = 'true';
 }
 
 function normalizeComposedLabel(variable, label){
@@ -384,10 +399,10 @@ function normalizeComposedLabel(variable, label){
 function insertComposedFields(row, typ, cell1, cell2, variable, offset, ref, name, lastRow){
 	var //values = Interpreter.getValueWithIndexToTab(variable.id, ref, offset, typ),
 			show = false
-	,		table = document.getElementById('tab_var');
+	,		table = getElById('tab_var');
 
 	addEventInCell(show, cell2, lastRow, table, row, variable, offset, ref, typ, name);
-	cell2.innerHTML = "<i class='glyphicon glyphicon-plus'></i><div id='variableToggle_"+variable.id+"'>";
+	cell2.innerHTML = "<i class='glyphicon glyphicon-plus' id='"+(Interpreter.getBase(variable.lv) + variable.adr + offset)+'b'+"'></i><div id='"+ (Interpreter.getBase(variable.lv) + variable.adr + offset) +"'>";
 	cell1.innerText = (name === '' ? variable.name : '') + normalizeComposedLabel({}, name);
 	setAttributeInComposedRow(row, variable.id);
 }
@@ -397,7 +412,7 @@ function addEventInCell(show, cell, lastRow, table, row, variable, offset, ref, 
 	cell.addEventListener("click", function(){
 		if(show){
 			show = false;
-			cell.innerHTML = "<i class='glyphicon glyphicon-plus'></i><div id='variableToggle_"+variable.id+"'>"
+			cell.innerHTML = "<i class='glyphicon glyphicon-plus' id='"+(Interpreter.getBase(variable.lv) + variable.adr + offset)+"'></i><div id='"+ (Interpreter.getBase(variable.lv) + variable.adr + offset) +'b'+"'>"
 			let i = lastRow.rowIndex;
 			while(i > row.rowIndex)
 				table.deleteRow(i--);
@@ -409,7 +424,7 @@ function addEventInCell(show, cell, lastRow, table, row, variable, offset, ref, 
 				mTyp = atab[ref].eltyp;
 				mRef = atab[ref].elref;
 				n = atab[ref].low;
-				cell.innerHTML = "<i class='glyphicon glyphicon-minus'></i><div id='variableToggle_"+variable.id+"'>"
+				cell.innerHTML = "<i class='glyphicon glyphicon-minus id='"+(Interpreter.getBase(variable.lv) + variable.adr + offset)+"''></i><div id='"+ (Interpreter.getBase(variable.lv) + variable.adr + offset) +'b'+"'>"
 				mOffset = offset;
 				while(n <= atab[ref].high){
 					lastRow = insertVariableInDebugPanel(variable, lastRow.rowIndex+1, mRef, mTyp, mOffset, name + ', ' + n);
@@ -422,7 +437,7 @@ function addEventInCell(show, cell, lastRow, table, row, variable, offset, ref, 
 				mTyp = tab[n].typ;
 				mRef = tab[n].ref;
 				mOffset = tab[n].adr + offset;
-				cell.innerHTML = "<i class='glyphicon glyphicon-minus'></i><div id='variableToggle_"+variable.id+"'>"
+				cell.innerHTML = "<i class='glyphicon glyphicon-minus id='"+(Interpreter.getBase(variable.lv) + variable.adr + offset)+"''></i><div id='"+ (Interpreter.getBase(variable.lv) + variable.adr + offset) +"'>"
 				while(n != 0){
 					lastRow = insertVariableInDebugPanel(variable, lastRow.rowIndex+1, mRef, mTyp, mOffset, name + '.'+tab[n].name);
 					n = tab[n].link;
@@ -442,14 +457,6 @@ function setAttributeInComposedRow(row, id){
 	row.setAttribute("id", "linha_"+id);
 }
 
-
-
-function removerTopoPilhaVar() {
-	if (document.getElementById("tab_var").getElementsByTagName("tr").length > 2) {
-		document.getElementById("tab_var").deleteRow(2);
-	}
-}
-
 function removerTodaPilhaVar(){
 	$("#tab_var tr:gt(1)").remove();
 }
@@ -459,52 +466,52 @@ function removerTodaPilhaVar(){
 function mostraItensDepuracao(bool){
 	if (bool) {
 		insertDebugHTML();
-		document.getElementById("continuar").style.visibility = "visible";
-		document.getElementById("exe_cursor").style.visibility = "visible";
-		document.getElementById("prox_funcao").style.visibility = "visible";
-		// document.getElementById("exe_entrando").style.visibility = "visible";
-		document.getElementById("exe_saindo").style.visibility = "visible";
-		//document.getElementById("nao_parar").style.visibility = "visible";
-		//document.getElementById("lb_nao_parar").style.visibility = "visible";
-		document.getElementById("coluna_direita").style.visibility = "visible";
+		getElById("continuar").style.visibility = "visible";
+		getElById("exe_cursor").style.visibility = "visible";
+		getElById("prox_funcao").style.visibility = "visible";
+		// getElById("exe_entrando").style.visibility = "visible";
+		getElById("exe_saindo").style.visibility = "visible";
+		//getElById("nao_parar").style.visibility = "visible";
+		//getElById("lb_nao_parar").style.visibility = "visible";
+		getElById("coluna_direita").style.visibility = "visible";
 
 
-		document.getElementById("codDiv").className = "col-md-7";
-		document.getElementById("coluna_direita").className = "col-md-5 col-xs-12";
-		document.getElementById("coluna_direita").style.height = "550px";
+		getElById("codDiv").className = "col-md-7";
+		getElById("coluna_direita").className = "col-md-5 col-xs-12";
+		getElById("coluna_direita").style.height = "550px";
 
 	} else {
-		//document.getElementById("continuar").style.visibility = "hidden";
-		//document.getElementById("exe_cursor").style.visibility = "hidden";
-		//document.getElementById("prox_funcao").style.visibility = "hidden";
-		// document.getElementById("exe_entrando").style.visibility = "hidden";
-		//document.getElementById("exe_saindo").style.visibility = "hidden";
-		//document.getElementById("nao_parar").style.visibility = "hidden";
-		//document.getElementById("lb_nao_parar").style.visibility = "hidden";
-		//document.getElementById("coluna_direita").style.visibility = "hidden";
+		//getElById("continuar").style.visibility = "hidden";
+		//getElById("exe_cursor").style.visibility = "hidden";
+		//getElById("prox_funcao").style.visibility = "hidden";
+		// getElById("exe_entrando").style.visibility = "hidden";
+		//getElById("exe_saindo").style.visibility = "hidden";
+		//getElById("nao_parar").style.visibility = "hidden";
+		//getElById("lb_nao_parar").style.visibility = "hidden";
+		//getElById("coluna_direita").style.visibility = "hidden";
 
-		document.getElementById("codDiv").className = "col-md-12";
-		//document.getElementById("coluna_direita").className = "";
-		//document.getElementById("coluna_direita").style.width = "1px;";
-		//document.getElementById("coluna_direita").style.height = "1px";
+		getElById("codDiv").className = "col-md-12";
+		//getElById("coluna_direita").className = "";
+		//getElById("coluna_direita").style.width = "1px;";
+		//getElById("coluna_direita").style.height = "1px";
 
 	}
 }
 
 function mostraItensDepuracao2(bool){
 	if (bool) {
-		document.getElementById("colunaDepuracao").className = "col-md-4";
+		getElById("colunaDepuracao").className = "col-md-4";
 	} else {
-		document.getElementById("colunaDepuracao").className = "col-md-0";
+		getElById("colunaDepuracao").className = "col-md-0";
 	}
 }
 
 
 function mostraBtExecucarNovamente(bool){
 	if (bool) {
-		document.getElementById("btNovamente").style.visibility = "visible";
+		getElById("btNovamente").style.visibility = "visible";
 	}else{
-		document.getElementById("btNovamente").style.visibility = "hidden";
+		getElById("btNovamente").style.visibility = "hidden";
 	}
 }
 
