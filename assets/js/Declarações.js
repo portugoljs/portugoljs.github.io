@@ -219,7 +219,7 @@ function DebugObject(memoryTHIS){
 		limpaLinhaDepurador();
 		this.isRunning = true;
 		this.state = 0;
-		adicionarTabelaPilha(progname);
+		updateCallStack(progname, true);
 		this.showVariablesToUser();
 		activedVariables = [];
 		n = 0;
@@ -314,20 +314,66 @@ function DebugObject(memoryTHIS){
 
 	}
 
-	this.updateVariables = function(){
+	this.deleteLocalVariables = function(base = btab[2].vsize){
+		var table = document.getElementById("tab_var");
+		while(table.rows[2].children[1].children[0].id > base)
+			removerTopoPilhaVar();
+	}
 
+	this.searchVariable = function(name){
+		return tab.filter((value) => value.name === name);
 	}
 
 	this.showVariablesToUser = function(id = 0){
-		if(id == 0)		//variáveis da rotina principal
+		var level = tab[id].lv
+		,		_id;
+		if(id === 0){		//variáveis globais
 			id = btab[2].last;
-		else
-			id = btab[tab[id].ref].last;
-		while(id != 0){
-			if(tab[id].obj == variable)
-				insertVariableInDebugPanel(this.activeVariable(id));
-			id = tab[id].link;
+			while(id != 0){
+				if(tab[id].obj in {variable, konstant})
+					insertVariableInDebugPanel(this.activeVariable(id));
+				id = tab[id].link;
+			}
 		}
+		else{
+			_id = tab[id].link;
+			while(_id != 0 && tab[_id].lv > 1){		//variáveis locais herdadas
+				if(tab[_id].obj in {variable, konstant} && tab[_id].lv === level)
+					insertVariableInDebugPanel(this.activeVariable(_id));
+				_id = tab[_id].link;
+			}
+		}
+	}
+
+	this.updateVariableInDebugPanel = function(input){
+		switch (input.name) {
+			case ints:
+				input.value = MEMORY.getInt(input.id)
+			break;
+			case pointers:
+				input.value = (MEMORY.getInt(input.id) != 0)? MEMORY.getInt(input.id) : 'nulo';
+			break;
+			case reals:
+				input.value = MEMORY.getFloat(input.id);
+			break;
+			case chars:
+				input.value = MEMORY.getChar(input.id);
+			break;
+			case strings:
+				input.value = MEMORY.getString(MEMORY.getInt(input.id));
+			break;
+			case bools:
+				input.value = (MEMORY.getBoolean(input.id))?'verdadeiro':'falso';
+			break;
+		}
+	}
+
+	this.insertNameInCallStack = function(name){
+		updateCallStack(name, true);
+	}
+
+	this.removeNameInCallStack = function(){
+		updateCallStack('', false);
 	}
 
 	this.activeVariable = function(id){
@@ -349,26 +395,27 @@ function InputObject(memoryTHIS){
 	,		readComplete = false
 	,		typeOfData;
 	const MEMORY = memoryTHIS;
-
-	this.save = function(value){
-			if(isReadingInstruction){
+	this.inputByDebug = false;
+	this.save = function(value, adr = MEMORY.getInt(), typ = typeOfData){
+			if(isReadingInstruction || this.inputByDebug){
 				isReadingInstruction = false;
-				switch (typeOfData) {
+				this.inputByDebug = false;
+				switch (typ) {
 					case ints:
-						MEMORY.setInt(MEMORY.getInt(), parseInt(value));
-						atualizaVariavel(MEMORY.popInt(), parseInt(value));
+					case pointers:
+						MEMORY.setInt(adr, parseInt(value));
 					break;
 					case reals:
-						MEMORY.setFloat(MEMORY.getInt(), Number(value));
-						atualizaVariavel(MEMORY.popInt(), Number(value));
+						MEMORY.setFloat(adr, Number(value));
 					break;
 					case chars:
-						MEMORY.setChar(MEMORY.getInt(), value[0]);
-						atualizaVariavel(MEMORY.popInt(), value[0]);
+						MEMORY.setChar(adr, value[0]);
 					break;
 					case strings:
-						MEMORY.setInt(MEMORY.getInt(), MEMORY.setString(value, MEMORY.getInt(MEMORY.getInt()), false));
-						atualizaVariavel(MEMORY.popInt(), value)
+						MEMORY.setInt(adr, MEMORY.setString(value, MEMORY.getInt(MEMORY.getInt()), false));
+					break;
+					case bools:
+						MEMORY.setBoolean(adr, value === 'verdadeiro');
 					break;
 				}
 			}

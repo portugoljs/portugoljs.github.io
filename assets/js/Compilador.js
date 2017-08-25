@@ -1476,7 +1476,7 @@ function block(fsys, isfun, level){
           }
           if (cp < lastp)
             Error(39);
-          emit2(line, 19, tab[i].typ, btab[tab[i].ref].psize);
+          emit2(line, 19, tab[i].typ, btab[tab[i].ref].psize, level);
           if (tab[i].lev < level)
             emit2(line, 3, tab[i].lev, level);
           x.typ = tab[i].typ;
@@ -3444,6 +3444,7 @@ try{
   isDone = true;
   finalInst = lc;
   emit(ilnx, 31);
+	tab[0].name = '';	//limpando a primeira posição de tab
 
   if (btab[2].vsize > stacksize)
     Error(49);

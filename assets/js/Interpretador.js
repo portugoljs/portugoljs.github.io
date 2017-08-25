@@ -3,13 +3,12 @@ const Interpreter = new function(){
 	var ir
 	,		pc
 	,		b
-	,		h1, h2, h3, h4, h5
+	,		h1, h2, h3, h4, h5, h6		//variáveis auxiliares para as instruções
 	,		startTime
 	,		isRunning = false
 	,		intervalExecution
 	,		display
 	,		readingInstruction = false
-	,		out = []
 	,		hasErrors
 	,		outdebug = false
 	,		bydebug = false;
@@ -473,30 +472,30 @@ const Interpreter = new function(){
 						case reals: h1 += 8; break;
 						case bools:
 						case chars: h1++; break;
-						case notyp: h1 = h1; break; //Procedimento não tem retorno, não precisa alocar espaço
+						case notyp: ; break; //Procedimento não tem retorno, não precisa alocar espaço
 						default:  h1 += 4;
 					}
-					h2 = MEMORY.getInt(h1 + 12); //{referência para tab}
+					h2 = MEMORY.getInt(h1 + 12); //referência para tab
 					h3 = tab[h2].lev;
 					display[h3 + 1] = h5;
 					h4 = MEMORY.getInt(h1 + 8) + h1;
 					MEMORY.setInt(h1, pc);
 					MEMORY.setInt(h1 + 4, display[h3]);
 					MEMORY.setInt(h1 + 8, b);
-					for (h3 = MEMORY.getTopOfStack();  h3 < h4;  h3++)
-							MEMORY.setUint8(h3, 0);
-					b = h5;
-					MEMORY.markStack(h4);
-					pc = tab[h2].adr;
 					if(DEBUGGER.isRunning){
 						if(DEBUGGER.state == IN){
 							DEBUGGER.stopLine = kode[tab[h2].adr].line;
 							mostraLinhaDepurador(DEBUGGER.stopLine--);
 						}
+						DEBUGGER.deleteLocalVariables();
 						DEBUGGER.showVariablesToUser(h2);
-						//carregaVariaveis(h2+1);
-						adicionarTabelaPilha(tab[h2].name);
+						DEBUGGER.insertNameInCallStack(tab[h2].name);
 					}
+					for (h3 = MEMORY.getTopOfStack();  h3 < h4;  h3++)
+							MEMORY.setUint8(h3, 0);
+					b = h5;
+					MEMORY.markStack(h4);
+					pc = tab[h2].adr;
 				break;
 				case 20:
 					h1 = ir.y; //apontador para atab
@@ -651,17 +650,8 @@ const Interpreter = new function(){
 					b = MEMORY.getInt(b + 8 + ir.y);
 
 					if(DEBUGGER.isRunning){
-						removerTopoPilha();
-						/*h1 = arrayObjetoTabela[arrayObjetoTabela.length - 1];     //Última variável retirada da pilha
-						while (h1 instanceof objetoTabela && arrayObjetoTabela[arrayObjetoTabela.length-1].lv == h1.lv) {
-							if(arrayObjetoTabela[arrayObjetoTabela.length - 1].idtab <= h1.idtab){     //Verificação para chamadas recursivas
-								removerTopoPilhaVar();
-								h1 = arrayObjetoTabela.pop();
-							}
-							else
-								break;
-						}*/
-
+						DEBUGGER.removeNameInCallStack();
+						DEBUGGER.deleteLocalVariables();
 						if(DEBUGGER.state == IN)
 							DEBUGGER.stopLine = kode[pc].line-1;
 						else if(DEBUGGER.state == OUT)
@@ -716,18 +706,18 @@ const Interpreter = new function(){
 							break;
 							case "reals":
 								MEMORY.setFloat(MEMORY.getInt(MEMORY.getTopOfStack() - 12), MEMORY.getFloat());
-								atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 12), MEMORY.getFloat(), ir.x);
+								//atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 12), MEMORY.getFloat(), ir.x);
 								MEMORY.popBlock(12);
 							break;
 							case "chars":
 							case "bools":    //BOOL ou CHAR
 								MEMORY.setUint8(MEMORY.getInt(MEMORY.getTopOfStack() - 5), MEMORY.getUint8());
-								atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 5), MEMORY.getUint8(), ir.x);
+								//atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 5), MEMORY.getUint8(), ir.x);
 								MEMORY.popBlock(5);
 							break;
 							default://ints pointers
 								MEMORY.setInt(MEMORY.getInt(MEMORY.getTopOfStack() - 8), MEMORY.getInt());
-								atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 8), MEMORY.getInt(), ir.x);
+								//atualizaVariavel(MEMORY.getInt(MEMORY.getTopOfStack() - 8), MEMORY.getInt(), ir.x);
 								MEMORY.popBlock(8);
 						}
 					}

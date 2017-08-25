@@ -1,2 +1,2 @@
-# portugoljs.github.io
-Ambiente para escrever, compilar, interpretar e depurar português estruturado através do navegador
+# ide-pseudocodigo
+Implementação de um ambiente de desenvolvimento integrado para compilar, executar e depurar pseudocódigo em browsers

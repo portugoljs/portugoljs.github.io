@@ -23,16 +23,13 @@ function time32() {
 $(document).ready(function() {
 	$('body').delegate('.cm-variable','mouseover',function(e){
 		if (Interpreter.isRunning() && Interpreter._DEBUGGER.isRunning) {
-			var nome = e.currentTarget.innerText;
-			var valorVar = procuraVar(nome);
-			if(valorVar !== undefined){
-				var x = e.clientX, y = e.clientY;
-				var tooltipSpan = document.getElementById('tpVar');
-				tooltipSpan.innerHTML = nome + ' := ' +valorVar;
-				tooltipSpan.style.visibility = 'visible';
-				tooltipSpan.style.top = (y + 10) + 'px';
-				tooltipSpan.style.left = (x + 10) + 'px';
-			}
+
+			var x = e.clientX, y = e.clientY;
+			var tooltipSpan = document.getElementById('tpVar');
+			tooltipSpan.innerHTML = valorVar;
+			tooltipSpan.style.visibility = 'visible';
+			tooltipSpan.style.top = (y + 10) + 'px';
+			tooltipSpan.style.left = (x + 10) + 'px';
 		}
 	});
 	$('body').delegate('.cm-variable','mouseout',function(e){
@@ -168,75 +165,6 @@ function mostraErro(){
 	adicionarErro(MsgErro+"\nTempo de compilação: "+((time != undefined)?time:0)+" ms.");
 }
 
-function getValue(i){
-	if(tab[i] instanceof Ttab && (tab[i].obj == variable || tab[i].obj == konstant)){
-		switch (tab[i].typ) {
-			case reals:
-			return s.getFloat64(display[tab[i].lev]+tab[i].adr);
-			break;
-			case ints:
-			return s.getInt32(display[tab[i].lev]+tab[i].adr);
-			break;
-
-			case bools:
-			return (s.getUint8(display[tab[i].lev]+tab[i].adr) == 0)?'falso':'verdadeiro';
-			break;
-
-			case chars:
-			return String.fromCharCode(s.getUint8(display[tab[i].lev]+tab[i].adr));
-			break;
-
-			case pointers:
-			return (s.getInt32(display[tab[i].lev]+tab[i].adr) == 0)?'nulo':s.getInt32(display[tab[i].lev]+tab[i].adr);
-			break;
-			case strings:
-			return getString(s.getInt32(display[tab[i].lev]+tab[i].adr));
-			break;
-			case arrays:
-			var len = Math.abs(atab[tab[i].ref].low) + Math.abs(atab[tab[i].ref].high) + 1;
-			var a = [];
-			var adr = display[tab[i].lev] + tab[i].adr;
-			switch (atab[tab[i].ref].eltyp) {
-				case ints:
-				case pointers:
-				len = adr + len * TAM_INT;
-				while(adr < len){
-					a.push(s.getInt32(adr));
-					adr += TAM_INT;
-				}
-				break;
-				case reals:
-				len = adr + len * TAM_REAL;
-				while(adr < len){
-					a.push(s.getFloat64(adr));
-					adr += TAM_REAL;
-				}
-				break;
-				case chars:
-				case bools:
-				len = adr + len * TAM_CHAR;
-				while(adr < len){
-					a.push(s.getUint8(adr));
-					adr += TAM_CHAR;
-				}
-				break;
-				case records:
-
-				break;
-				case strings:
-				len = adr + len * TAM_INT;
-				while(adr < len){
-					a.push(getString(s.getInt32(adr)));
-					adr += TAM_INT;
-				}
-				break;
-			}
-			return a;
-			break;
-		}
-	}
-}
-
 function isLetter(char){
 	var a = "a".charCodeAt();
 	var A = "A".charCodeAt();
@@ -299,7 +227,7 @@ function insertDebugHTML(){
       <div class="col-md-6 col-xs-12">
         <div id="pilha" style="width:100%; float:right">
           <div class="table-responsive" style="max-height:320px; overflow-y:auto;">
-            <table class="table table-bordered" id="tab_logic" style="border: 0px solid #dddddd;">
+            <table class="table table-bordered" id="tab_callstack" style="border: 0px solid #dddddd;">
               <thead>
                 <tr >
                   <th colspan="2">Pilha de execução</th>
@@ -333,100 +261,25 @@ function limpaDebug(){
 //fim funcoes debug
 
 //funcoes para pilha
-function adicionarTabelaPilha(funcao) {
-	/*$('#tab_logic').append('<tr><td>'+ funcao + '</td></tr>');*/
-	var table = document.getElementById("tab_logic");
-	var row = table.insertRow(1);
-	var cell1 = row.insertCell(0);
-	cell1.innerHTML = funcao;
-}
+function updateCallStack(funcao, add) {
+	if(add){
+		var table = document.getElementById("tab_callstack");
+		var row = table.insertRow(1);
+		var cell1 = row.insertCell(0);
+		cell1.innerHTML = funcao;
+	}
+	else
+		document.getElementById("tab_callstack").deleteRow(1);
 
-function removerTopoPilha() {
-	document.getElementById("tab_logic").deleteRow(1);
-}
-
-function getNumberStacks(){
-	return document.getElementById("tab_logic").rows.length - 1;
 }
 
 function removerTodaPilhaFuncoes(){
-	$("#tab_logic tr:gt(1	)").remove();
+	$("#tab_callstack tr:gt(1	)").remove();
 }
 
 //fim funcoes para pilha
 
 //funcoes para pilha de variaveis
-//array de objetos
-var arrayObjetoTabela = [];
-//Carregar variáveis no depurador
-
-function carregaVariaveis(start){//str_tab
-	var value, itab = start-1;
-	if (tab[itab].lev <= display.length-1)
-		return;
-	while(tab[start] instanceof Ttab && tab[start].obj != "prozedure" && tab[start].obj != "funktion" && tab[start].name != "") {
-		if (tab[start].obj != "prozedure" && tab[start].obj != "funktion"){
-			switch (tab[start].typ) {
-				case "reals":
-				value = s.getFloat64(display[tab[start].lev]+tab[start].adr);
-				break;
-				case "chars":
-				value = String.fromCharCode(s.getUint8(display[tab[start].lev]+tab[start].adr));
-				break;
-				case "bools":
-				value = (s.getUint8(display[tab[start].lev]+tab[start].adr) == 0)?"falso":"verdadeiro";
-				break;
-				case "strings":
-				if (s.getInt32(display[tab[start].lev]+tab[start].adr) != 0)
-				value = getString(s.getInt32(display[tab[start].lev]+tab[start].adr));
-				else
-				value = "";
-				break;
-				default:
-				value = s.getInt32(display[tab[start].lev]+tab[start].adr);
-			}
-			if(tab[start].typ == "records"){
-				if (tab[start].obj == "variable") {
-					var ref = tab[start].ref;
-					adicionarObjetoVar(tab[start].name, value, start, tab[start].lev, tab[start].adr);
-					if (ref !== undefined && ref !== 0) {
-						var prox = (btab[ref].last);
-						if (prox !== undefined && prox !== 0) {
-							do {
-								start++;
-								adicionarObjetoFilho(tab[prox].name, value, prox, tab[prox].lev, tab[prox].adr);
-								prox = tab[prox].link;
-							} while (prox !== 0);
-						}
-					}
-				}
-			}
-
-			if((tab[start].obj == "variable" || tab[start].obj == "konstant")){
-
-				if(tab[start].typ == "arrays") {
-					adicionarObjetoVar(tab[start].name, value, start, tab[start].lev, tab[start].adr);
-				}else{
-					adicionarObjetoVar(tab[start].name, value, start, tab[start].lev, tab[start].adr);
-					if (tab[start].lev < 2) {
-					}
-
-				}
-			}
-			start++;
-		}
-	}
-}
-
-function procuraVar(id){
-	var valor;
-	for (var i = 0; i < tab.length; i++) {
-		if (tab[i].name == id) {
-			valor =  getValue(i);
-		}
-	}
-	return valor;
-}
 
 //cria objeto tabela e verifica se existe os valores para adicionar na tabela
 function adicionarObjetoVar(id){
@@ -434,57 +287,6 @@ function adicionarObjetoVar(id){
 	insertVariableInDebugPanel(objeto);
 	arrayObjetoTabela.push(objeto);
 }
-//adicionar objeto filho na tabela
-function adicionarObjetoFilho(posNome,posValor, start, lv, adr){
-	adr += Interpreter.getBase(lv);
-	objeto = new VarObject(posNome,posValor, start, lv, adr);
-	adicionaFilhos(objeto);
-	arrayObjetoTabela.push(objeto);
-}
-
-function atualizaVariavel(adr, value, typ){
-	for (var i = 0; i < arrayObjetoTabela.length; i++) {
-		var objeto = arrayObjetoTabela[i];
-		if (objeto.adr == adr) {
-			var input = document.getElementById(objeto.id);
-			if (input !== null) {
-				if(typ == "bools"){
-					if(value != 0)
-					input.value = "verdadeiro";
-					else
-					input.value = "falso";
-				}
-				else if(typ == chars){
-					input.value = input.value;
-				}
-				else if(typ == strings)
-				input.value = getString(value);
-				else
-				input.value = value;
-			}
-		}
-	}
-}
-
-/*function mostraValoresArranjo(id){
-	$("#tabelaArranjo tr:gt(0)").remove();
-	var table = document.getElementById("tabelaArranjo")
-	,		v = tab[id]
-	,		a = atab[v.ref]
-	,		values = Interpreter.getValueWithIndexToTab(id)
-	,		i
-	,		x = 1;
-	if (v !== undefined && values !== undefined) {
-		if(atab[tab[id].ref].inxtyp != chars)
-			for (i = atab[tab[id].ref].high; i >= atab[tab[id].ref].low; i--) {
-				var row = table.insertRow(1);
-				var cell1 = row.insertCell(0);
-				var cell2 = row.insertCell(1);
-				cell1.innerHTML = v.name+"["+(a.inxtyp == chars ? String.fromCharCode(i) : i)+"]";
-				cell2.innerHTML = values.pop();
-			}
-	}
-}objeto*/
 
 function insertVariableInDebugPanel(variable, idRow = 2, ref = tab[variable.id].ref, typ = tab[variable.id].typ, offset = 0, name = '') {
 	var table = document.getElementById("tab_var")
@@ -515,17 +317,34 @@ function insertVariableInDebugPanel(variable, idRow = 2, ref = tab[variable.id].
 					else
 						variable.value = 'falso';
 				cell1.innerHTML = variable.name;
-				cell2.innerHTML = "<input type='text' value='"+ variable.value +"'name='"+variable.id+"' id='"+ variable.id +"'>";
+				cell2.innerHTML = "<input type='text' onkeypress='return inputVariableEvent(event, this)' readOnly='true' value='"+ variable.value +"'name='"+typ+"' id='"+ (Interpreter.getBase(variable.lv) + variable.adr + offset) +"'onclick='enableInputField(this);'>";
 			}
 			else {
 				cell1.innerText = normalizeComposedLabel(variable, name);
-				cell2.innerText = Interpreter.getValueWithIndexToTab(variable.id, ref, offset, typ);
+				cell2.innerHTML = "<input type='text' onkeypress='return inputVariableEvent(event, this)' readOnly='true' value='"+ Interpreter.getValueWithIndexToTab(variable.id, ref, offset, typ) +"'name='"+typ+"' id='"+ (Interpreter.getBase(variable.lv) + variable.adr + offset) +"'onclick='enableInputField(this);'>";
 			}
 
 		break;
 	}
-	disableVariableInput();
 	return row;
+}
+
+
+function enableInputField(input){
+	input.readOnly = false;
+}
+
+function inputVariableEvent(e, v){
+	if(e.key === 'Enter'){
+		Interpreter._INPUT.inputByDebug = true;
+		Interpreter._INPUT.save(v.value, v.id, v.name);
+		disableInputField(v);
+		Interpreter._DEBUGGER.updateVariableInDebugPanel(v);
+	}
+}
+
+function disableInputField(input){
+	input.readOnly = true;
 }
 
 function normalizeComposedLabel(variable, label){
@@ -569,7 +388,7 @@ function insertComposedFields(row, typ, cell1, cell2, variable, offset, ref, nam
 
 	addEventInCell(show, cell2, lastRow, table, row, variable, offset, ref, typ, name);
 	cell2.innerHTML = "<i class='glyphicon glyphicon-plus'></i><div id='variableToggle_"+variable.id+"'>";
-	cell1.innerText = variable.name + normalizeComposedLabel({}, name);
+	cell1.innerText = (name === '' ? variable.name : '') + normalizeComposedLabel({}, name);
 	setAttributeInComposedRow(row, variable.id);
 }
 
@@ -599,101 +418,19 @@ function addEventInCell(show, cell, lastRow, table, row, variable, offset, ref, 
 				}
 			}
 			else{
-				mOffset = offset;
 				n = btab[ref].last;
 				mTyp = tab[n].typ;
 				mRef = tab[n].ref;
-				mOffset += btab[ref].vsize;
+				mOffset = tab[n].adr + offset;
 				cell.innerHTML = "<i class='glyphicon glyphicon-minus'></i><div id='variableToggle_"+variable.id+"'>"
 				while(n != 0){
 					lastRow = insertVariableInDebugPanel(variable, lastRow.rowIndex+1, mRef, mTyp, mOffset, name + '.'+tab[n].name);
-					mOffset -= tab[n].adr;
 					n = tab[n].link;
+					mTyp = tab[n].typ;
+					mRef = tab[n].ref;
+					mOffset = tab[n].adr + offset;
 				}
 			}
-		}
-	});
-}
-
-/*function insertComposedFields(variable, ref, actualRow, typ = tab[variable.id].typ, offset = 0, legacyName = (typ === arrays?'[':'')){
-	var table = document.getElementById('tab_var')
-	,		rowIndex = actualRow.rowIndex
-	,		firstRow = table.rows[rowIndex]
-	,		row
-	,		otherRow
-	,		values = Interpreter.getValueWithIndexToTab(variable.id, ref, offset, typ)
-	,		value = Array.isArray(values) ? values.shift(): values
-	,		cell1, cell2
-	,		t
-	,		i
-	,		show = false
-	,		finalRow = 0;
-	if(typ == arrays){
-		if(!Array.isArray(value))
-			typ = atab[ref].eltyp;
-		i = atab[ref].low;
-		legacyName += legacyName === '[' ? '' + (atab[ref].inxtyp === chars ? String.fromCharCode(i):i) : ', ' + (atab[ref].inxtyp === chars ? String.fromCharCode(i):i);
-	}
-	if(typ == records){
-		t = btab[ref].last;
-		if(!Array.isArray(value))
-			typ = tab[t].typ;
-	}
-
-	while(value != undefined){
-		row = table.insertRow(++rowIndex);
-		cell1 = row.insertCell(0);
-		cell2 = row.insertCell(1);
-		if(typ in stantyps){
-			cell1.innerText = legacyName+(legacyName === '['? '' : ', ')+(atab[ref].inxtyp == chars? String.fromCharCode(i):i)+']';
-			cell2.innerHTML = "<input type='text' disabled=disabled value='"+ value +"'name='"+variable.id+i+"'id='"+ variable.id +"'>";
-			i++;
-			offset += typesLength[typ];
-		}
-		else{
-			setAttributeInRow(row, variable.id);
-			formatElementsInCells(row, cell1, cell2, show, variable, offset, ref, legacyName, i, finalRow);
-			if(typ === arrays)
-				offset += atab[ref].elsize;
-			else if(typ === records){
-				offset += btab[ref].vsize;
-				t = tab[t].link;
-				typ = tab[t].typ;
-			}
-			i++;
-		}
-		value = values.shift();
-	}
-	return row;
-
-}*/
-
-function formatElementsInCells(row, cell1, cell2, show, variable, offset, ref, legacyName = '', i = 1, finalRow){
-	var table = document.getElementById('tab_var');
-	cell2.innerHTML = "<i class='glyphicon glyphicon-plus'></i><div id='variableToggle_"+variable.id+"'>";
-	cell1.innerHTML = legacyName+(legacyName === '['? '' : ', ')+(atab[ref].inxtyp == chars? String.fromCharCode(i):i)+']';
-	cell2.addEventListener("click", function(){
-		if(show){
-			show = false;
-			cell2.innerHTML = "<i class='glyphicon glyphicon-plus'></i><div id='variableToggle_"+variable.id+"'>"
-			let i = finalRow.rowIndex;
-			while(i > row.rowIndex)
-				table.deleteRow(i--);
-
-		}
-		else{
-			let n = '';
-			if (legacyName == '')
-				n = '[';
-			else{
-				if (legacyName == '[')
-					n += '';
-				else
-					n += ', ';// + atab[ref].inxtyp === chars ? String.fromCharCode(i):i;
-			}
-			finalRow = insertComposedFields(variable, atab[ref].elref, row, atab[ref].eltyp, offset, legacyName + n);
-			show = true;
-			cell2.innerHTML = "<i class='glyphicon glyphicon-minus'></i><div id='variableToggle_"+variable.id+"'>"
 		}
 	});
 }
@@ -705,25 +442,7 @@ function setAttributeInComposedRow(row, id){
 	row.setAttribute("id", "linha_"+id);
 }
 
-function adicionaFilhos(objeto){
-	var table = document.getElementById("tab_var");
-	var row = table.insertRow(3);
-	var cell1 = row.insertCell(0);
-	var cell2 = row.insertCell(1);
 
-	row.setAttribute("class", "collapse active row"+id_linha_pai);
-
-	cell1.innerHTML = objeto.name;
-	cell2.innerHTML = "<input type='text' value='"+ objeto.value +"'name='"+objeto.id+"' id='"+ objeto.id +"'>";
-}
-
-function disableVariableInput(){
-	$("#tab_var").find("input").attr("disabled", "disabled");
-}
-
-function ativarTabelaVar(){
-	$("#tab_var").find("input").removeAttr('disabled');
-}
 
 function removerTopoPilhaVar() {
 	if (document.getElementById("tab_var").getElementsByTagName("tr").length > 2) {
@@ -733,61 +452,6 @@ function removerTopoPilhaVar() {
 
 function removerTodaPilhaVar(){
 	$("#tab_var tr:gt(1)").remove();
-	arrayObjetoTabela = [];
-}
-//funcao para salvar as variaveis editadasstr_tab
-function eachObjetoTabela(objeto){
-	var input = document.getElementById(objeto.id);
-	if(input != null){
-		switch (tab[objeto.id].typ) {
-			case "strings":
-			var adr = s.getInt32(objeto.adr);
-			StringAlloc(input.value);
-			break;
-			case "reals":
-			number = Number(input.value);
-			if(!Number.isNaN(number))
-			s.setFloat64(objeto.adr, number);
-			else
-			input.value = "NaN";
-			break;
-			case "ints":
-			number = Number(input.value);
-			if(!Number.isNaN(number))
-			s.setInt32(objeto.adr, number);
-			else
-			input.value = "NaN";
-			break;
-			case "bools":
-			var str = input.value;
-			str = str.toLowerCase();
-			if(str == "verdadeiro")
-			s.setUint8(objeto.adr, 1);
-			else{
-				s.setUint8(objeto.adr, 0);
-				input.value = "falso";
-			}
-			break;
-			case "chars":
-			var char = input.value.charCodeAt();
-			s.setUint8(objeto.adr, char);
-			input.value = char;
-			break;
-		}
-	}
-
-}
-
-
-//funcao para atualizar todas as variaveis
-function atualizarTodasVar(){
-	for (var i = 0; i < arrayObjetoTabela.length; i++) {
-		var objeto = arrayObjetoTabela[i];
-		var input = document.getElementById(objeto.idinput);
-		if (input !== null) {
-			input.value = s[objeto.posValor];
-		}
-	}
 }
 
 //fim funcoes para pilha de variaveis

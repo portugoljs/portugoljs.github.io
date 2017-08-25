@@ -1,31 +1,5 @@
-//ATALHOS
-//Para depurar
-function debug(){
-	if (isOk && isDone){
-		debug_op = true;
-		call_read = false;
-		debug = false;
-		limpaContadores();
-		mostraItensDepuracao(true);
-		stopln = kode[tab[btab[1].last].adr].line-1;
-		limpaLinhaDepurador();
-		mostraLinhaDepurador(stopln+1);
-	}
-	else {
-		if (isOk){
-			MsgErro = "Você precisa compilar primeiro.";
-		}
-		else {
-			MsgErro = "A compilação não foi realizada com sucesso.";
-		}
-		mostraErro();
-	}
-}
-shortcut.add("F6",function() {	debug();});
-
-
 //para compilar
-function compiler(){
+function compile(){
 	time = new Date().getTime();
 	InputFile = editor.getValue();
 	isOk = true;
@@ -36,131 +10,46 @@ function compiler(){
 	mostraErro();
 }
 shortcut.add("F9",function() {
-	compiler();
+	compile();
 });
 
-//executar o programa
-function reexecute(){
-	if(lastCompiledCode	!= GetHashCode(editor.getValue()))	compiler();
-	if (isOk && isDone && !debug_op){
-		limpaConsole();
-		mostrarModalOutput();
-		call_read = false;
+//reexecutar o programa
+function executeAgain(){
+	if(isOk && isDone){
 		Interpreter.init();
-	}
-	else {
-		if (debug_op){
-			debug = false;
-			call_read = true;
-			stopln = kode[finalInst].line;
-			if(kode[pc].f == 70)
-			pc++;
-			Interpreter.init();
-		}
-		else if (isOk){
-			MsgErro = "Você precisa compilar o programa antes de executá-lo.";
-			mostraErro();
-			esconderModalOutput();
-		}
-		else {
-			MsgErro = "O programa não foi compilado corretamente.";
-			mostraErro();
-			esconderModalOutput();
-		}
-
+		Interpreter.resume();
 	}
 }
-shortcut.add("Ctrl+F9",function(){reexecute();});
+shortcut.add("Ctrl+F9",function(){executeAgain();});
 
 //Compilar e executar
 shortcut.add("F10",function() {compileAndExecute();});
 
 //rodar até o cursor
-function runToCursor(){
-	if(!debug_op){
-		debug();
-	}
-	stopln = editor.getCursor().line-1;
-	CursorRun = true;
-	debug_op = true;
-	if(!debug_op){
-		debug();
-		indebug = true;
-		interpret();
-	}
-	interpret();
-
-}
 shortcut.add("F4",function(){Interpreter._DEBUGGER.Until();});
 
 //passo-a-passo entrando em rotinas (step into)
-function inRoutine(){
-	debugger;
-	if(!debug_op){
-		debug();
-		indebug = true;
-		interpret();
-	}
-	else {
-		indebug = true;
-		stopln = kode[pc].line;
-		interpret();
-	}
-
-}
 shortcut.add("F7",function() {Interpreter._DEBUGGER.In();});
 
 //Executar até o finalInst
-shortcut.add("Ctrl+F7", function(){FinishIt();});
-function FinishIt(){
-	indebug = false;
-	bydebug = false;
-	CursorRun = false;
-	outdebug = false;
-	interpret();
+shortcut.add("Ctrl+F7", function(){finish();});
+function finish(){
+	if(Interpreter.isRunning()){
+		Interpreter._DEBUGGER.isRunning = false;
+		Interpreter.resume();
+	}
 }
 
 //Executar até sair da rotina(step out)
-function outRoutine(){
-	outdebug = true;
-	sNumber = getNumberStacks();
-	debug = false;
-	interpret();
-}
 shortcut.add("Ctrl+F8",function() {Interpreter._DEBUGGER.Out();});
 
 //passo-a-passo saltando rotinas (step over)
-function byRoutine(){
-	if(!debug_op){
-		debug();
-		indebug = true;
-		interpret();
-	}
-	else{
-		if(kode[pc].f == 18){
-			sNumber = getNumberStacks();
-			stopln = kode[pc].line;
-			bydebug = true;
-			interpret();
-		}
-		else{
-			bydebug = true;
-			interpret();
-		}
-	}
-
-
-}
 shortcut.add("F8",function() {Interpreter._DEBUGGER.Over();});
 
 //interromper a depuração e a execução
-function stopDeb(){
-	debug_op = false;
-	pc = finalInst;
-	interpret();
-}
 shortcut.add("Ctrl+F2",function() {
-	stopDeb();
+	if(Interpreter.isRunning())
+		Interpreter.finalize();
 });
 
 //fim atalhos
