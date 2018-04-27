@@ -514,5 +514,3 @@ function mostraBtExecucarNovamente(bool){
 		getElById("btNovamente").style.visibility = "hidden";
 	}
 }
-
-mostraItensDepuracao(false);
