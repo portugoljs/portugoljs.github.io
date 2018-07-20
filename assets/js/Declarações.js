@@ -446,6 +446,7 @@ function InputObject(memoryTHIS){
 	const MEMORY = memoryTHIS;
 
 	this.save = function(value){
+		debugger;
 			if(isReadingInstruction){
 				isReadingInstruction = false;
 				switch (typeOfData) {
